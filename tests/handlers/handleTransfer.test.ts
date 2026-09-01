@@ -18,7 +18,7 @@ class TransferFixture {
 }
 
 const TRANSFER_FIXTURE: TransferFixture = {
-  id: MOCK_EVENT.transaction.hash.toHexString() + '-' + MOCK_EVENT.logIndex.toString(),
+  id: MOCK_EVENT.transaction.hash.concatI32(MOCK_EVENT.logIndex.toI32()).toHexString(),
   tokenId: tokenId.toString(),
   from: from.toHexString(),
   to: to.toHexString(),

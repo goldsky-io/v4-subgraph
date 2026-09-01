@@ -1,7 +1,7 @@
 import { BigDecimal, BigInt } from '@graphprotocol/graph-ts'
 
 import { exponentToBigDecimal, safeDiv } from '../utils/index'
-import { Bundle, Pool, Token } from './../types/schema'
+import { Bundle, Pool, Token, TokenWhitelist } from './../types/schema'
 import { ADDRESS_ZERO, ONE_BD, ZERO_BD, ZERO_BI } from './constants'
 import { NativeTokenDetails } from './nativeTokenDetails'
 
@@ -65,7 +65,8 @@ export function findNativePerToken(
   if (token.id == wrappedNativeAddress || token.id == ADDRESS_ZERO) {
     return ONE_BD
   }
-  const whiteList = token.whitelistPools
+  const tokenWhitelist = TokenWhitelist.load(token.id)
+  const whiteList = tokenWhitelist !== null ? tokenWhitelist.pools : new Array<string>(0)
   // for now just take USD from pool with greatest TVL
   // need to update this to actually detect best rate based on liquidity distribution
   let largestLiquidityETH = ZERO_BD

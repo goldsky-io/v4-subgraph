@@ -5,14 +5,9 @@ import { Swap as SwapEvent } from '../types/PoolManager/PoolManager'
 import { Bundle, Pool, PoolManager, Swap, Token } from '../types/schema'
 import { getSubgraphConfig, getUSDStableStableHookAddresses, SubgraphConfig } from '../utils/chains'
 import { ONE_BI, ZERO_BD } from '../utils/constants'
+import { eventId } from '../utils/id'
 import { convertTokenToDecimal, loadTransaction, safeDiv } from '../utils/index'
-import {
-  updatePoolDayData,
-  updatePoolHourData,
-  updateTokenDayData,
-  updateTokenHourData,
-  updateUniswapDayData,
-} from '../utils/intervalUpdates'
+import { recordPoolData, recordProtocolData, recordTokenData } from '../utils/intervalUpdates'
 import {
   findNativePerToken,
   getNativePriceInUSD,
@@ -77,49 +72,11 @@ export function handleHookSwap(event: HookSwapEvent): void {
   token1.untrackedVolumeUSD = token1.untrackedVolumeUSD.plus(amountTotalUSDUntracked)
   token1.feesUSD = token1.feesUSD.plus(feesUSD)
 
-  const poolDayData = updatePoolDayData(pool, event)
-  const poolHourData = updatePoolHourData(pool, event)
-  const token0DayData = updateTokenDayData(token0, event, bundle)
-  const token1DayData = updateTokenDayData(token1, event, bundle)
-  const token0HourData = updateTokenHourData(token0, event, bundle)
-  const token1HourData = updateTokenHourData(token1, event, bundle)
-
   // HookSwap volume is internal to the aggregator hook, so we intentionally do not
-  // update global protocol aggregates (PoolManager / UniswapDayData) here.
-
-  poolDayData.volumeUSD = poolDayData.volumeUSD.plus(amountTotalUSDTracked)
-  poolDayData.volumeToken0 = poolDayData.volumeToken0.plus(amount0Abs)
-  poolDayData.volumeToken1 = poolDayData.volumeToken1.plus(amount1Abs)
-  poolDayData.feesUSD = poolDayData.feesUSD.plus(feesUSD)
-
-  poolHourData.volumeUSD = poolHourData.volumeUSD.plus(amountTotalUSDTracked)
-  poolHourData.volumeToken0 = poolHourData.volumeToken0.plus(amount0Abs)
-  poolHourData.volumeToken1 = poolHourData.volumeToken1.plus(amount1Abs)
-  poolHourData.feesUSD = poolHourData.feesUSD.plus(feesUSD)
-
-  token0DayData.volume = token0DayData.volume.plus(amount0Abs)
-  token0DayData.volumeUSD = token0DayData.volumeUSD.plus(amountTotalUSDTracked)
-  token0DayData.untrackedVolumeUSD = token0DayData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-  token0DayData.feesUSD = token0DayData.feesUSD.plus(feesUSD)
-
-  token0HourData.volume = token0HourData.volume.plus(amount0Abs)
-  token0HourData.volumeUSD = token0HourData.volumeUSD.plus(amountTotalUSDTracked)
-  token0HourData.untrackedVolumeUSD = token0HourData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-  token0HourData.feesUSD = token0HourData.feesUSD.plus(feesUSD)
-
-  token1DayData.volume = token1DayData.volume.plus(amount1Abs)
-  token1DayData.volumeUSD = token1DayData.volumeUSD.plus(amountTotalUSDTracked)
-  token1DayData.untrackedVolumeUSD = token1DayData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-  token1DayData.feesUSD = token1DayData.feesUSD.plus(feesUSD)
-
-  token1HourData.volume = token1HourData.volume.plus(amount1Abs)
-  token1HourData.volumeUSD = token1HourData.volumeUSD.plus(amountTotalUSDTracked)
-  token1HourData.untrackedVolumeUSD = token1HourData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-  token1HourData.feesUSD = token1HourData.feesUSD.plus(feesUSD)
-
+  // record protocol-level datapoints here.
   const transaction = loadTransaction(event)
   // Persist HookSwap as Swap. Fields not emitted by HookSwap are set to zero.
-  const swap = new Swap(transaction.id + '-' + event.logIndex.toString())
+  const swap = new Swap(eventId(event.transaction.hash, event.logIndex))
   swap.transaction = transaction.id
   swap.timestamp = transaction.timestamp
   swap.pool = pool.id
@@ -138,12 +95,10 @@ export function handleHookSwap(event: HookSwapEvent): void {
   token0.save()
   token1.save()
   swap.save()
-  poolDayData.save()
-  poolHourData.save()
-  token0DayData.save()
-  token1DayData.save()
-  token0HourData.save()
-  token1HourData.save()
+
+  recordPoolData(pool, event, amount0Abs, amount1Abs, amountTotalUSDTracked, amountTotalUSDUntracked, feesUSD)
+  recordTokenData(token0, event, bundle, amount0Abs, amountTotalUSDTracked, amountTotalUSDUntracked, feesUSD)
+  recordTokenData(token1, event, bundle, amount1Abs, amountTotalUSDTracked, amountTotalUSDUntracked, feesUSD)
 }
 
 export function handleSwapHelper(event: SwapEvent, subgraphConfig: SubgraphConfig = getSubgraphConfig()): void {
@@ -266,7 +221,13 @@ export function handleSwapHelper(event: SwapEvent, subgraphConfig: SubgraphConfi
       const prices = sqrtPriceX96ToTokenPrices(pool.sqrtPrice, token0, token1, nativeTokenDetails)
       pool.token0Price = prices[0]
       pool.token1Price = prices[1]
-      bundle.ethPriceUSD = getNativePriceInUSD(stablecoinWrappedNativePoolId, stablecoinIsToken0)
+      if (poolId == stablecoinWrappedNativePoolId) {
+        // this swap just set the reference price; a store load would return
+        // the pre-swap snapshot
+        bundle.ethPriceUSD = stablecoinIsToken0 ? prices[0] : prices[1]
+      } else {
+        bundle.ethPriceUSD = getNativePriceInUSD(stablecoinWrappedNativePoolId, stablecoinIsToken0)
+      }
     }
 
     bundle.save()
@@ -317,62 +278,24 @@ export function handleSwapHelper(event: SwapEvent, subgraphConfig: SubgraphConfi
     token0.totalValueLockedUSD = token0.totalValueLocked.times(token0.derivedETH).times(bundle.ethPriceUSD)
     token1.totalValueLockedUSD = token1.totalValueLocked.times(token1.derivedETH).times(bundle.ethPriceUSD)
 
-    // interval data
-    const uniswapDayData = updateUniswapDayData(event, poolManager)
-    const poolDayData = updatePoolDayData(pool, event)
-    const poolHourData = updatePoolHourData(pool, event)
-    const token0DayData = updateTokenDayData(token0, event, bundle)
-    const token1DayData = updateTokenDayData(token1, event, bundle)
-    const token0HourData = updateTokenHourData(token0, event, bundle)
-    const token1HourData = updateTokenHourData(token1, event, bundle)
+    // timeseries datapoints, rolled up into ProtocolStats/PoolStats/TokenStats
+    recordProtocolData(
+      poolManager,
+      event,
+      amountTotalETHTracked,
+      amountTotalUSDTracked,
+      amountTotalUSDUntracked,
+      feesUSD,
+    )
+    recordPoolData(pool, event, amount0Abs, amount1Abs, amountTotalUSDTracked, amountTotalUSDUntracked, feesUSD)
+    recordTokenData(token0, event, bundle, amount0Abs, amountTotalUSDTracked, amountTotalUSDUntracked, feesUSD)
+    recordTokenData(token1, event, bundle, amount1Abs, amountTotalUSDTracked, amountTotalUSDUntracked, feesUSD)
 
-    // update volume metrics
-    uniswapDayData.volumeETH = uniswapDayData.volumeETH.plus(amountTotalETHTracked)
-    uniswapDayData.volumeUSD = uniswapDayData.volumeUSD.plus(amountTotalUSDTracked)
-    uniswapDayData.feesUSD = uniswapDayData.feesUSD.plus(feesUSD)
-
-    poolDayData.volumeUSD = poolDayData.volumeUSD.plus(amountTotalUSDTracked)
-    poolDayData.volumeToken0 = poolDayData.volumeToken0.plus(amount0Abs)
-    poolDayData.volumeToken1 = poolDayData.volumeToken1.plus(amount1Abs)
-    poolDayData.feesUSD = poolDayData.feesUSD.plus(feesUSD)
-
-    poolHourData.volumeUSD = poolHourData.volumeUSD.plus(amountTotalUSDTracked)
-    poolHourData.volumeToken0 = poolHourData.volumeToken0.plus(amount0Abs)
-    poolHourData.volumeToken1 = poolHourData.volumeToken1.plus(amount1Abs)
-    poolHourData.feesUSD = poolHourData.feesUSD.plus(feesUSD)
-
-    token0DayData.volume = token0DayData.volume.plus(amount0Abs)
-    token0DayData.volumeUSD = token0DayData.volumeUSD.plus(amountTotalUSDTracked)
-    token0DayData.untrackedVolumeUSD = token0DayData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-    token0DayData.feesUSD = token0DayData.feesUSD.plus(feesUSD)
-
-    token0HourData.volume = token0HourData.volume.plus(amount0Abs)
-    token0HourData.volumeUSD = token0HourData.volumeUSD.plus(amountTotalUSDTracked)
-    token0HourData.untrackedVolumeUSD = token0HourData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-    token0HourData.feesUSD = token0HourData.feesUSD.plus(feesUSD)
-
-    token1DayData.volume = token1DayData.volume.plus(amount1Abs)
-    token1DayData.volumeUSD = token1DayData.volumeUSD.plus(amountTotalUSDTracked)
-    token1DayData.untrackedVolumeUSD = token1DayData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-    token1DayData.feesUSD = token1DayData.feesUSD.plus(feesUSD)
-
-    token1HourData.volume = token1HourData.volume.plus(amount1Abs)
-    token1HourData.volumeUSD = token1HourData.volumeUSD.plus(amountTotalUSDTracked)
-    token1HourData.untrackedVolumeUSD = token1HourData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-    token1HourData.feesUSD = token1HourData.feesUSD.plus(feesUSD)
-
-    token0DayData.save()
-    token1DayData.save()
-    uniswapDayData.save()
-    poolDayData.save()
-    poolHourData.save()
-    token0HourData.save()
-    token1HourData.save()
     if (!isUSDStableStableHookPool) {
       // For aggregator hook pools, HookSwap emits the canonical swap amounts, so skip
       // persisting the PoolManager Swap entity to avoid duplicate swap records.
       const transaction = loadTransaction(event)
-      const swap = new Swap(transaction.id + '-' + event.logIndex.toString())
+      const swap = new Swap(eventId(event.transaction.hash, event.logIndex))
       swap.transaction = transaction.id
       swap.timestamp = transaction.timestamp
       swap.pool = pool.id

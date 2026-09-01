@@ -4,15 +4,10 @@ import { AggregatorHook } from '../types/PoolManager/AggregatorHook'
 import { ModifyLiquidity as ModifyLiquidityEvent } from '../types/PoolManager/PoolManager'
 import { Bundle, ModifyLiquidity, Pool, PoolManager, Tick, Token } from '../types/schema'
 import { getSubgraphConfig, getUSDStableStableHookAddresses, SubgraphConfig } from '../utils/chains'
-import { ONE_BI } from '../utils/constants'
+import { ONE_BI, ZERO_BD } from '../utils/constants'
+import { eventId } from '../utils/id'
 import { convertTokenToDecimal, loadTransaction, safeDiv } from '../utils/index'
-import {
-  updatePoolDayData,
-  updatePoolHourData,
-  updateTokenDayData,
-  updateTokenHourData,
-  updateUniswapDayData,
-} from '../utils/intervalUpdates'
+import { recordPoolData, recordProtocolData, recordTokenData } from '../utils/intervalUpdates'
 import { getAmount0, getAmount1 } from '../utils/liquidityMath/liquidityAmounts'
 import { calculateAmountUSD } from '../utils/pricing'
 import { createTick } from '../utils/tick'
@@ -130,7 +125,7 @@ export function handleModifyLiquidityHelper(
     poolManager.totalValueLockedUSD = poolManager.totalValueLockedETH.times(bundle.ethPriceUSD)
 
     const transaction = loadTransaction(event)
-    const modifyLiquidity = new ModifyLiquidity(transaction.id.toString() + '-' + event.logIndex.toString())
+    const modifyLiquidity = new ModifyLiquidity(eventId(event.transaction.hash, event.logIndex))
     modifyLiquidity.transaction = transaction.id
     modifyLiquidity.timestamp = transaction.timestamp
     modifyLiquidity.pool = pool.id
@@ -173,13 +168,11 @@ export function handleModifyLiquidityHelper(
     lowerTick.save()
     upperTick.save()
 
-    updateUniswapDayData(event, poolManager)
-    updatePoolDayData(pool, event)
-    updatePoolHourData(pool, event)
-    updateTokenDayData(token0, event, bundle)
-    updateTokenDayData(token1, event, bundle)
-    updateTokenHourData(token0, event, bundle)
-    updateTokenHourData(token1, event, bundle)
+    // timeseries datapoints (no volume contributed by liquidity events)
+    recordProtocolData(poolManager, event, ZERO_BD, ZERO_BD, ZERO_BD, ZERO_BD)
+    recordPoolData(pool, event, ZERO_BD, ZERO_BD, ZERO_BD, ZERO_BD, ZERO_BD)
+    recordTokenData(token0, event, bundle, ZERO_BD, ZERO_BD, ZERO_BD, ZERO_BD)
+    recordTokenData(token1, event, bundle, ZERO_BD, ZERO_BD, ZERO_BD, ZERO_BD)
 
     token0.save()
     token1.save()

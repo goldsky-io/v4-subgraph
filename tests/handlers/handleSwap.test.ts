@@ -212,7 +212,7 @@ describe('handleSwap', () => {
       ],
     ])
 
-    assertObjectMatches('Swap', MOCK_EVENT.transaction.hash.toHexString() + '-' + MOCK_EVENT.logIndex.toString(), [
+    assertObjectMatches('Swap', MOCK_EVENT.transaction.hash.concatI32(MOCK_EVENT.logIndex.toI32()).toHexString(), [
       ['transaction', MOCK_EVENT.transaction.hash.toHexString()],
       ['timestamp', MOCK_EVENT.block.timestamp.toString()],
       ['pool', USDC_WETH_POOL_ID],
@@ -229,55 +229,36 @@ describe('handleSwap', () => {
       ['logIndex', MOCK_EVENT.logIndex.toString()],
     ])
 
-    const dayId = MOCK_EVENT.block.timestamp.toI32() / 86400
-    const hourId = MOCK_EVENT.block.timestamp.toI32() / 3600
-
-    assertObjectMatches('UniswapDayData', dayId.toString(), [
+    // Timeseries rows: the matchstick store keys them by the placeholder id 0,
+    // so each assertion sees the row written last (graph-node assigns real ids).
+    assertObjectMatches('ProtocolData', '0', [
       ['volumeETH', amountTotalETHTRacked.toString()],
       ['volumeUSD', amountTotalUSDTracked.toString()],
+      ['untrackedVolumeUSD', amountTotalUSDUntracked.toString()],
       ['feesUSD', feesUSD.toString()],
     ])
 
-    assertObjectMatches('PoolDayData', USDC_WETH_POOL_ID + '-' + dayId.toString(), [
-      ['volumeUSD', amountTotalUSDTracked.toString()],
+    assertObjectMatches('PoolData', '0', [
+      ['pool', USDC_WETH_POOL_ID],
       ['volumeToken0', amount0Abs.toString()],
       ['volumeToken1', amount1Abs.toString()],
-      ['feesUSD', feesUSD.toString()],
-    ])
-
-    assertObjectMatches('PoolHourData', USDC_WETH_POOL_ID + '-' + hourId.toString(), [
       ['volumeUSD', amountTotalUSDTracked.toString()],
-      ['volumeToken0', amount0Abs.toString()],
-      ['volumeToken1', amount1Abs.toString()],
+      ['untrackedVolumeUSD', amountTotalUSDUntracked.toString()],
       ['feesUSD', feesUSD.toString()],
+      ['token0Price', newPoolPrices[0].toString()],
+      ['token1Price', newPoolPrices[1].toString()],
+      ['liquidity', SWAP_FIXTURE.liquidity.toString()],
+      ['sqrtPrice', SWAP_FIXTURE.sqrtPriceX96.toString()],
     ])
 
-    assertObjectMatches('TokenDayData', USDC_MAINNET_FIXTURE.address + '-' + dayId.toString(), [
-      ['volume', amount0Abs.toString()],
-      ['volumeUSD', amountTotalUSDTracked.toString()],
-      ['untrackedVolumeUSD', amountTotalUSDTracked.toString()],
-      ['feesUSD', feesUSD.toString()],
-    ])
-
-    assertObjectMatches('TokenDayData', WETH_MAINNET_FIXTURE.address + '-' + dayId.toString(), [
+    // token1 (WETH) is recorded last, so its row occupies the placeholder id
+    assertObjectMatches('TokenData', '0', [
+      ['token', WETH_MAINNET_FIXTURE.address],
       ['volume', amount1Abs.toString()],
       ['volumeUSD', amountTotalUSDTracked.toString()],
-      ['untrackedVolumeUSD', amountTotalUSDTracked.toString()],
+      ['untrackedVolumeUSD', amountTotalUSDUntracked.toString()],
       ['feesUSD', feesUSD.toString()],
-    ])
-
-    assertObjectMatches('TokenHourData', USDC_MAINNET_FIXTURE.address + '-' + hourId.toString(), [
-      ['volume', amount0Abs.toString()],
-      ['volumeUSD', amountTotalUSDTracked.toString()],
-      ['untrackedVolumeUSD', amountTotalUSDTracked.toString()],
-      ['feesUSD', feesUSD.toString()],
-    ])
-
-    assertObjectMatches('TokenHourData', WETH_MAINNET_FIXTURE.address + '-' + hourId.toString(), [
-      ['volume', amount1Abs.toString()],
-      ['volumeUSD', amountTotalUSDTracked.toString()],
-      ['untrackedVolumeUSD', amountTotalUSDTracked.toString()],
-      ['feesUSD', feesUSD.toString()],
+      ['priceUSD', newToken1DerivedETH.times(newEthPrice).toString()],
     ])
   })
 })

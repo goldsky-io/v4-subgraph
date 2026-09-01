@@ -2,7 +2,7 @@ import { BigInt, log } from '@graphprotocol/graph-ts'
 
 import { Initialize as InitializeEvent } from '../types/PoolManager/PoolManager'
 import { PoolManager } from '../types/schema'
-import { Bundle, Pool, Token } from '../types/schema'
+import { Bundle, Pool, Token, TokenWhitelist } from '../types/schema'
 import {
   getStaticNativePriceUSD,
   getSubgraphConfig,
@@ -10,7 +10,7 @@ import {
   SubgraphConfig,
 } from '../utils/chains'
 import { ADDRESS_ZERO, ONE_BD, ONE_BI, ZERO_BD, ZERO_BI } from '../utils/constants'
-import { updatePoolDayData, updatePoolHourData } from '../utils/intervalUpdates'
+import { recordPoolData } from '../utils/intervalUpdates'
 import { findNativePerToken, getNativePriceInUSD, sqrtPriceX96ToTokenPrices } from '../utils/pricing'
 import { fetchTokenDecimals, fetchTokenName, fetchTokenSymbol, fetchTokenTotalSupply } from '../utils/token'
 
@@ -94,7 +94,6 @@ export function handleInitializeHelper(
     token0.totalValueLockedUSDUntracked = ZERO_BD
     token0.txCount = ZERO_BI
     token0.poolCount = ZERO_BI
-    token0.whitelistPools = []
   }
 
   if (token1 === null) {
@@ -120,19 +119,22 @@ export function handleInitializeHelper(
     token1.totalValueLockedUSDUntracked = ZERO_BD
     token1.txCount = ZERO_BI
     token1.poolCount = ZERO_BI
-    token1.whitelistPools = []
   }
 
   // update white listed pools
   if (whitelistTokens.includes(token0.id)) {
-    const newPools = token1.whitelistPools
+    const whitelist = loadTokenWhitelist(token1.id)
+    const newPools = whitelist.pools
     newPools.push(pool.id)
-    token1.whitelistPools = newPools
+    whitelist.pools = newPools
+    whitelist.save()
   }
   if (whitelistTokens.includes(token1.id)) {
-    const newPools = token0.whitelistPools
+    const whitelist = loadTokenWhitelist(token0.id)
+    const newPools = whitelist.pools
     newPools.push(pool.id)
-    token0.whitelistPools = newPools
+    whitelist.pools = newPools
+    whitelist.save()
   }
 
   pool.token0 = token0.id
@@ -193,11 +195,19 @@ export function handleInitializeHelper(
     bundle.ethPriceUSD = getNativePriceInUSD(stablecoinWrappedNativePoolId, stablecoinIsToken0)
   }
   bundle.save()
-  updatePoolDayData(pool, event)
-  updatePoolHourData(pool, event)
+  recordPoolData(pool, event, ZERO_BD, ZERO_BD, ZERO_BD, ZERO_BD, ZERO_BD)
   token1.derivedETH = findNativePerToken(token1, wrappedNativeAddress, stablecoinAddresses, minimumNativeLocked, bundle)
   token0.derivedETH = findNativePerToken(token0, wrappedNativeAddress, stablecoinAddresses, minimumNativeLocked, bundle)
 
   token0.save()
   token1.save()
+}
+
+function loadTokenWhitelist(tokenId: string): TokenWhitelist {
+  let whitelist = TokenWhitelist.load(tokenId)
+  if (whitelist === null) {
+    whitelist = new TokenWhitelist(tokenId)
+    whitelist.pools = []
+  }
+  return whitelist
 }

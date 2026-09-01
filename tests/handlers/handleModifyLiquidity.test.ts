@@ -160,7 +160,7 @@ describe('handleModifyLiquidity', () => {
     ])
     assertObjectMatches(
       'ModifyLiquidity',
-      MOCK_EVENT.transaction.hash.toHexString() + '-' + MOCK_EVENT.logIndex.toString(),
+      MOCK_EVENT.transaction.hash.concatI32(MOCK_EVENT.logIndex.toI32()).toHexString(),
       [
         ['transaction', MOCK_EVENT.transaction.hash.toHexString()],
         ['timestamp', MOCK_EVENT.block.timestamp.toString()],
@@ -259,7 +259,7 @@ describe('handleModifyLiquidity', () => {
     ])
     assertObjectMatches(
       'ModifyLiquidity',
-      MOCK_EVENT.transaction.hash.toHexString() + '-' + MOCK_EVENT.logIndex.toString(),
+      MOCK_EVENT.transaction.hash.concatI32(MOCK_EVENT.logIndex.toI32()).toHexString(),
       [
         ['transaction', MOCK_EVENT.transaction.hash.toHexString()],
         ['timestamp', MOCK_EVENT.block.timestamp.toString()],
@@ -361,7 +361,7 @@ describe('handleModifyLiquidity', () => {
     const expectedAmount1 = BigDecimal.fromString('-111171964.475622427888514086')
     assertObjectMatches(
       'ModifyLiquidity',
-      MOCK_EVENT.transaction.hash.toHexString() + '-' + MOCK_EVENT.logIndex.toString(),
+      MOCK_EVENT.transaction.hash.concatI32(MOCK_EVENT.logIndex.toI32()).toHexString(),
       [
         ['amount0', expectedAmount0.toString()],
         ['amount1', expectedAmount1.toString()],

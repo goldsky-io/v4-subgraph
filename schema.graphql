@@ -67,10 +67,6 @@ type Token @entity(immutable: false) {
   # price of that chain's native token, effectively, this should be renamed
   # derivedNative
   derivedETH: BigDecimal!
-  # pools token is in that are white listed for USD pricing
-  whitelistPools: [Pool!]!
-  # derived fields
-  tokenDayData: [TokenDayData!]! @derivedFrom(field: "token")
 }
 
 type Pool @entity(immutable: false) {
@@ -132,10 +128,6 @@ type Pool @entity(immutable: false) {
   totalValueLockedUSDUntracked: BigDecimal!
   # Fields used to help derived relationship
   liquidityProviderCount: BigInt! # used to detect new exchanges
-  # hourly snapshots of pool data
-  poolHourData: [PoolHourData!]! @derivedFrom(field: "pool")
-  # daily snapshots of pool data
-  poolDayData: [PoolDayData!]! @derivedFrom(field: "pool")
   # hooks address
   hooks: String!
   # derived fields
@@ -169,7 +161,7 @@ type Tick @entity(immutable: false) {
 
 type Transaction @entity(immutable: true) {
   # txn hash
-  id: ID!
+  id: Bytes!
   # block txn was included in
   blockNumber: BigInt!
   # timestamp txn was confirmed
@@ -186,8 +178,8 @@ type Transaction @entity(immutable: true) {
 }
 
 type Swap @entity(immutable: true) {
-  # transaction hash + "#" + index in swaps Transaction array
-  id: ID!
+  # transaction hash concatenated with the event log index
+  id: Bytes!
   # pointer to transaction
   transaction: Transaction!
   # timestamp of transaction
@@ -219,8 +211,8 @@ type Swap @entity(immutable: true) {
 }
 
 type ModifyLiquidity @entity(immutable: true) {
-  # transaction hash + "#" + index in mints Transaction array
-  id: ID!
+  # transaction hash concatenated with the event log index
+  id: Bytes!
   # which txn the ModifyLiquidity was included in
   transaction: Transaction!
   # time of txn
@@ -253,168 +245,6 @@ type ModifyLiquidity @entity(immutable: true) {
   logIndex: BigInt
 }
 
-# Data accumulated and condensed into day stats for all of Uniswap
-type UniswapDayData @entity(immutable: false) {
-  # timestamp rounded to current day by dividing by 86400
-  id: ID!
-  # timestamp rounded to current day by dividing by 86400
-  date: Int!
-  # total daily volume in Uniswap derived in terms of ETH
-  volumeETH: BigDecimal!
-  # total daily volume in Uniswap derived in terms of USD
-  volumeUSD: BigDecimal!
-  # total daily volume in Uniswap derived in terms of USD untracked
-  volumeUSDUntracked: BigDecimal!
-  # fees in USD
-  feesUSD: BigDecimal!
-  # number of daily transactions
-  txCount: BigInt!
-  # tvl in terms of USD
-  tvlUSD: BigDecimal!
-}
-
-# Data accumulated and condensed into day stats for each pool
-type PoolDayData @entity(immutable: false) {
-  # timestamp rounded to current day by dividing by 86400
-  id: ID!
-  # timestamp rounded to current day by dividing by 86400
-  date: Int!
-  # pointer to pool
-  pool: Pool!
-  # in range liquidity at end of period
-  liquidity: BigInt!
-  # current price tracker at end of period
-  sqrtPrice: BigInt!
-  # price of token0 - derived from sqrtPrice
-  token0Price: BigDecimal!
-  # price of token1 - derived from sqrtPrice
-  token1Price: BigDecimal!
-  # current tick at end of period
-  tick: BigInt
-  # tvl derived in USD at end of period
-  tvlUSD: BigDecimal!
-  # volume in token0
-  volumeToken0: BigDecimal!
-  # volume in token1
-  volumeToken1: BigDecimal!
-  # volume in USD
-  volumeUSD: BigDecimal!
-  # fees in USD
-  feesUSD: BigDecimal!
-  # numebr of transactions during period
-  txCount: BigInt!
-  # opening price of token0
-  open: BigDecimal!
-  # high price of token0
-  high: BigDecimal!
-  # low price of token0
-  low: BigDecimal!
-  # close price of token0
-  close: BigDecimal!
-}
-
-# hourly stats tracker for pool
-type PoolHourData @entity(immutable: false) {
-  # format: <pool address>-<timestamp>
-  id: ID!
-  # unix timestamp for start of hour
-  periodStartUnix: Int!
-  # pointer to pool
-  pool: Pool!
-  # in range liquidity at end of period
-  liquidity: BigInt!
-  # current price tracker at end of period
-  sqrtPrice: BigInt!
-  # price of token0 - derived from sqrtPrice
-  token0Price: BigDecimal!
-  # price of token1 - derived from sqrtPrice
-  token1Price: BigDecimal!
-  # current tick at end of period
-  tick: BigInt
-  # tvl derived in USD at end of period
-  tvlUSD: BigDecimal!
-  # volume in token0
-  volumeToken0: BigDecimal!
-  # volume in token1
-  volumeToken1: BigDecimal!
-  # volume in USD
-  volumeUSD: BigDecimal!
-  # fees in USD
-  feesUSD: BigDecimal!
-  # numebr of transactions during period
-  txCount: BigInt!
-  # opening price of token0
-  open: BigDecimal!
-  # high price of token0
-  high: BigDecimal!
-  # low price of token0
-  low: BigDecimal!
-  # close price of token0
-  close: BigDecimal!
-}
-
-type TokenDayData @entity(immutable: false) {
-  # token address concatendated with date
-  id: ID!
-  # timestamp rounded to current day by dividing by 86400
-  date: Int!
-  # pointer to token
-  token: Token!
-  # volume in token units
-  volume: BigDecimal!
-  # volume in derived USD
-  volumeUSD: BigDecimal!
-  # volume in USD even on pools with less reliable USD values
-  untrackedVolumeUSD: BigDecimal!
-  # liquidity across all pools in token units
-  totalValueLocked: BigDecimal!
-  # liquidity across all pools in derived USD
-  totalValueLockedUSD: BigDecimal!
-  # price at end of period in USD
-  priceUSD: BigDecimal!
-  # fees in USD
-  feesUSD: BigDecimal!
-  # opening price USD
-  open: BigDecimal!
-  # high price USD
-  high: BigDecimal!
-  # low price USD
-  low: BigDecimal!
-  # close price USD
-  close: BigDecimal!
-}
-
-type TokenHourData @entity(immutable: false) {
-  # token address concatendated with date
-  id: ID!
-  # unix timestamp for start of hour
-  periodStartUnix: Int!
-  # pointer to token
-  token: Token!
-  # volume in token units
-  volume: BigDecimal!
-  # volume in derived USD
-  volumeUSD: BigDecimal!
-  # volume in USD even on pools with less reliable USD values
-  untrackedVolumeUSD: BigDecimal!
-  # liquidity across all pools in token units
-  totalValueLocked: BigDecimal!
-  # liquidity across all pools in derived USD
-  totalValueLockedUSD: BigDecimal!
-  # price at end of period in USD
-  priceUSD: BigDecimal!
-  # fees in USD
-  feesUSD: BigDecimal!
-  # opening price USD
-  open: BigDecimal!
-  # high price USD
-  high: BigDecimal!
-  # low price USD
-  low: BigDecimal!
-  # close price USD
-  close: BigDecimal!
-}
-
 type Position @entity(immutable: false) {
   # tokenId
   id: ID!
@@ -435,8 +265,8 @@ type Position @entity(immutable: false) {
 }
 
 type Subscribe @entity(immutable: true) {
-  # transaction hash + '-' + log index
-  id: ID!
+  # transaction hash concatenated with the event log index
+  id: Bytes!
   # token id of position subscribed to
   tokenId: BigInt!
   # address of subscriber
@@ -454,8 +284,8 @@ type Subscribe @entity(immutable: true) {
 }
 
 type Unsubscribe @entity(immutable: true) {
-  # transaction hash + '-' + log index
-  id: ID!
+  # transaction hash concatenated with the event log index
+  id: Bytes!
   # token id of position unsubscribed from
   tokenId: BigInt!
   # address of unsubscriber
@@ -473,8 +303,8 @@ type Unsubscribe @entity(immutable: true) {
 }
 
 type Transfer @entity(immutable: true) {
-  # transaction hash + '-' + log index
-  id: ID!
+  # transaction hash concatenated with the event log index
+  id: Bytes!
   # token id of position
   tokenId: BigInt!
   # address of previous owner
@@ -517,4 +347,115 @@ type ArrakisHook @entity(immutable: false) {
   createdAtTimestamp: BigInt!
   # block number of creation
   createdAtBlockNumber: BigInt!
+}
+# Pools whitelisted for pricing a token, split off Token so the hot
+# pricing walk loads a small row and Token loads stop carrying the array
+type TokenWhitelist @entity(immutable: false) {
+  # token address
+  id: ID!
+  # pool ids usable to derive the token's native price
+  pools: [String!]!
+}
+
+# Raw per-event pool datapoints; graph-node rolls these up into PoolStats
+type PoolData @entity(timeseries: true) {
+  id: Int8!
+  timestamp: Timestamp!
+  pool: Pool!
+  # deltas contributed by this event
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!
+  untrackedVolumeUSD: BigDecimal!
+  feesUSD: BigDecimal!
+  # pool state after this event
+  liquidity: BigInt!
+  sqrtPrice: BigInt!
+  token0Price: BigDecimal!
+  token1Price: BigDecimal!
+  tick: BigInt!
+  tvlUSD: BigDecimal!
+}
+
+# Replaces PoolDayData / PoolHourData; query with interval: hour | day
+type PoolStats @aggregation(intervals: ["hour", "day"], source: "PoolData") {
+  id: Int8!
+  timestamp: Timestamp!
+  pool: Pool!
+  volumeToken0: BigDecimal! @aggregate(fn: "sum", arg: "volumeToken0")
+  volumeToken1: BigDecimal! @aggregate(fn: "sum", arg: "volumeToken1")
+  volumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "volumeUSD")
+  untrackedVolumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "untrackedVolumeUSD")
+  feesUSD: BigDecimal! @aggregate(fn: "sum", arg: "feesUSD")
+  txCount: Int8! @aggregate(fn: "count")
+  open: BigDecimal! @aggregate(fn: "first", arg: "token0Price")
+  high: BigDecimal! @aggregate(fn: "max", arg: "token0Price")
+  low: BigDecimal! @aggregate(fn: "min", arg: "token0Price")
+  close: BigDecimal! @aggregate(fn: "last", arg: "token0Price")
+  token0Price: BigDecimal! @aggregate(fn: "last", arg: "token0Price")
+  token1Price: BigDecimal! @aggregate(fn: "last", arg: "token1Price")
+  liquidity: BigInt! @aggregate(fn: "last", arg: "liquidity")
+  sqrtPrice: BigInt! @aggregate(fn: "last", arg: "sqrtPrice")
+  tick: BigInt! @aggregate(fn: "last", arg: "tick")
+  tvlUSD: BigDecimal! @aggregate(fn: "last", arg: "tvlUSD")
+}
+
+# Raw per-event token datapoints; graph-node rolls these up into TokenStats
+type TokenData @entity(timeseries: true) {
+  id: Int8!
+  timestamp: Timestamp!
+  token: Token!
+  # deltas contributed by this event
+  volume: BigDecimal!
+  volumeUSD: BigDecimal!
+  untrackedVolumeUSD: BigDecimal!
+  feesUSD: BigDecimal!
+  # token state after this event
+  priceUSD: BigDecimal!
+  totalValueLocked: BigDecimal!
+  totalValueLockedUSD: BigDecimal!
+}
+
+# Replaces TokenDayData / TokenHourData; query with interval: hour | day
+type TokenStats @aggregation(intervals: ["hour", "day"], source: "TokenData") {
+  id: Int8!
+  timestamp: Timestamp!
+  token: Token!
+  volume: BigDecimal! @aggregate(fn: "sum", arg: "volume")
+  volumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "volumeUSD")
+  untrackedVolumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "untrackedVolumeUSD")
+  feesUSD: BigDecimal! @aggregate(fn: "sum", arg: "feesUSD")
+  open: BigDecimal! @aggregate(fn: "first", arg: "priceUSD")
+  high: BigDecimal! @aggregate(fn: "max", arg: "priceUSD")
+  low: BigDecimal! @aggregate(fn: "min", arg: "priceUSD")
+  close: BigDecimal! @aggregate(fn: "last", arg: "priceUSD")
+  priceUSD: BigDecimal! @aggregate(fn: "last", arg: "priceUSD")
+  totalValueLocked: BigDecimal! @aggregate(fn: "last", arg: "totalValueLocked")
+  totalValueLockedUSD: BigDecimal! @aggregate(fn: "last", arg: "totalValueLockedUSD")
+}
+
+# Raw per-event protocol datapoints; graph-node rolls these up into ProtocolStats
+type ProtocolData @entity(timeseries: true) {
+  id: Int8!
+  timestamp: Timestamp!
+  # deltas contributed by this event
+  volumeETH: BigDecimal!
+  volumeUSD: BigDecimal!
+  untrackedVolumeUSD: BigDecimal!
+  feesUSD: BigDecimal!
+  # protocol state after this event
+  tvlUSD: BigDecimal!
+}
+
+# Replaces UniswapDayData; query with interval: hour | day.
+# txCount is cumulative to match the old UniswapDayData.txCount snapshot.
+type ProtocolStats @aggregation(intervals: ["hour", "day"], source: "ProtocolData") {
+  id: Int8!
+  timestamp: Timestamp!
+  volumeETH: BigDecimal! @aggregate(fn: "sum", arg: "volumeETH")
+  volumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "volumeUSD")
+  volumeUSDUntracked: BigDecimal! @aggregate(fn: "sum", arg: "untrackedVolumeUSD")
+  feesUSD: BigDecimal! @aggregate(fn: "sum", arg: "feesUSD")
+  txCount: Int8! @aggregate(fn: "count", cumulative: true)
+  tvlUSD: BigDecimal! @aggregate(fn: "last", arg: "tvlUSD")
 }

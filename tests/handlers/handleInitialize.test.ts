@@ -3,7 +3,7 @@ import { assert, beforeEach, clearStore, describe, test } from 'matchstick-as'
 
 import { handleInitializeHelper } from '../../src/mappings/poolManager'
 import { Initialize } from '../../src/types/PoolManager/PoolManager'
-import { Bundle, Pool } from '../../src/types/schema'
+import { Bundle, Pool, TokenWhitelist } from '../../src/types/schema'
 import { ADDRESS_ZERO } from '../../src/utils/constants'
 import { safeDiv } from '../../src/utils/index'
 import { findNativePerToken, getNativePriceInUSD, sqrtPriceX96ToTokenPrices } from '../../src/utils/pricing'
@@ -221,8 +221,11 @@ describe('findNativePerToken', () => {
     pool.save()
 
     const token0 = createAndStoreTestToken(WBTC_MAINNET_FIXTURE)
-    token0.whitelistPools = [WBTC_WETH_POOL_ID]
     token0.save()
+
+    const whitelist = new TokenWhitelist(token0.id)
+    whitelist.pools = [WBTC_WETH_POOL_ID]
+    whitelist.save()
 
     const token1 = createAndStoreTestToken(WETH_MAINNET_FIXTURE)
     token1.derivedETH = BigDecimal.fromString('10')
@@ -253,8 +256,11 @@ describe('findNativePerToken', () => {
 
   test('success - token is not wrapped native or stablecoin, but has no pools with liquidity', () => {
     const token0 = createAndStoreTestToken(WBTC_MAINNET_FIXTURE)
-    token0.whitelistPools = [WBTC_WETH_POOL_ID]
     token0.save()
+
+    const whitelist = new TokenWhitelist(token0.id)
+    whitelist.pools = [WBTC_WETH_POOL_ID]
+    whitelist.save()
 
     const ethPerToken = findNativePerToken(
       token0,

@@ -12,7 +12,7 @@ class UnsubscribedFixture {
 }
 
 const UNSUBSCRIPTION_FIXTURE: UnsubscribedFixture = {
-  id: MOCK_EVENT.transaction.hash.toHexString() + '-' + MOCK_EVENT.logIndex.toString(),
+  id: MOCK_EVENT.transaction.hash.concatI32(MOCK_EVENT.logIndex.toI32()).toHexString(),
   tokenId: POSITION_FIXTURE.tokenId.toString(),
   address: MOCK_EVENT.address.toHexString(),
 }

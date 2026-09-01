@@ -1,4 +1,6 @@
-specVersion: 0.0.4
+specVersion: 1.3.0
+indexerHints:
+  prune: auto
 description: Uniswap is a decentralized protocol for automated token exchange on Ethereum.
 repository: https://github.com/Uniswap/v4-subgraph
 schema:
@@ -9,14 +11,14 @@ features:
 dataSources:
   - source:
       abi: PoolManager
-      address: "0x33620f62c5b9b2086dd6b62f4a297a9f30347029"
-      startBlock: 6606180
+      address: "0x8366a39cc670b4001a1121b8f6a443a643e40951"
+      startBlock: 9070
     name: PoolManager
-    network: tempo
+    network: robinhood-mainnet
     kind: ethereum/contract
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.7
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       file: ./src/mappings/poolManager.mapping.ts
       entities:
@@ -45,14 +47,14 @@ dataSources:
           handler: handleSwap
   - source:
       abi: PositionManager
-      address: "0x3fc79444f8eacc1894775493ff3fa41f1e35ce11"
-      startBlock: 6606180
+      address: "0x58daec3116aae6d93017baaea7749052e8a04fa7"
+      startBlock: 9073
     name: PositionManager
-    network: tempo
+    network: robinhood-mainnet
     kind: ethereum/contract
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.7
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       file: ./src/mappings/positionManager.mapping.ts
       entities:
@@ -67,32 +69,3 @@ dataSources:
           handler: handleUnsubscription
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
-  - source:
-      abi: AggregatorHook
-      address: "0x7169a78a59f136876e724b648fbb339a42f46888"
-      startBlock: 6606180
-    name: AggregatorHook
-    network: tempo
-    kind: ethereum/contract
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      file: ./src/mappings/poolManager.mapping.ts
-      entities:
-        - Pool
-        - Token
-      abis:
-        - name: ERC20
-          file: ./abis/ERC20.json
-        - name: ERC20SymbolBytes
-          file: ./abis/ERC20SymbolBytes.json
-        - name: ERC20NameBytes
-          file: ./abis/ERC20NameBytes.json
-        - name: PoolManager
-          file: ./abis/PoolManager.json
-        - name: AggregatorHook
-          file: ./abis/AggregatorHook.json
-      eventHandlers:
-        - event: HookSwap(indexed bytes32,indexed address,int256,int256,uint24)
-          handler: handleHookSwap

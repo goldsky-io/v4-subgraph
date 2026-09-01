@@ -21,7 +21,7 @@ const contractTemplates = {
     kind: 'ethereum/contract',
     mapping: {
       kind: 'ethereum/events',
-      apiVersion: '0.0.7',
+      apiVersion: '0.0.9',
       language: 'wasm/assemblyscript',
       file: './src/mappings/poolManager.mapping.ts',
       entities: ['Pool', 'Token'],
@@ -52,7 +52,7 @@ const contractTemplates = {
     kind: 'ethereum/contract',
     mapping: {
       kind: 'ethereum/events',
-      apiVersion: '0.0.7',
+      apiVersion: '0.0.9',
       language: 'wasm/assemblyscript',
       file: './src/mappings/positionManager.mapping.ts',
       entities: ['Position'],
@@ -77,7 +77,7 @@ const contractTemplates = {
     kind: 'ethereum/contract',
     mapping: {
       kind: 'ethereum/events',
-      apiVersion: '0.0.7',
+      apiVersion: '0.0.9',
       language: 'wasm/assemblyscript',
       file: './src/mappings/euler.mapping.ts',
       entities: ['Position'],
@@ -98,7 +98,7 @@ const contractTemplates = {
     kind: 'ethereum/contract',
     mapping: {
       kind: 'ethereum/events',
-      apiVersion: '0.0.7',
+      apiVersion: '0.0.9',
       language: 'wasm/assemblyscript',
       file: './src/mappings/arrakis.mapping.ts',
       entities: ['ArrakisHook'],
@@ -115,7 +115,7 @@ const contractTemplates = {
     kind: 'ethereum/contract',
     mapping: {
       kind: 'ethereum/events',
-      apiVersion: '0.0.7',
+      apiVersion: '0.0.9',
       language: 'wasm/assemblyscript',
       file: './src/mappings/poolManager.mapping.ts',
       entities: ['Pool', 'Token'],
@@ -138,7 +138,10 @@ const contractTemplates = {
 
 // Base subgraph configuration
 const baseConfig = {
-  specVersion: '0.0.4',
+  specVersion: '1.3.0',
+  indexerHints: {
+    prune: 'auto',
+  },
   description: 'Uniswap is a decentralized protocol for automated token exchange on Ethereum.',
   repository: 'https://github.com/Uniswap/v4-subgraph',
   schema: {
