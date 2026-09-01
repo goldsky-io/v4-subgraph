@@ -140,7 +140,7 @@ const contractTemplates = {
 const baseConfig = {
   specVersion: '1.3.0',
   indexerHints: {
-    prune: 'auto',
+    prune: 'never',
   },
   description: 'Uniswap is a decentralized protocol for automated token exchange on Ethereum.',
   repository: 'https://github.com/Uniswap/v4-subgraph',
